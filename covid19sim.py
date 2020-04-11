@@ -1,6 +1,7 @@
 import math
 from random import random
 from enum import Enum
+from collections import deque
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -14,11 +15,12 @@ proportionSevereCritical = 0.25
 recoveryTime = 18
 fatalityRate = 0.01
 maxPatientsPerNurse = 4
-totalDays = 200
+totalDays = 240
 icuBedsPerHundredThousand = 13.5
 totalIcuBeds = max(1, round(populationSize * 13.5/100000))
 strikeDays = 0
 ppeArrivalDay = 9999999
+prioritizeNurseForNurseCare = False
 
 # Model
 
@@ -112,21 +114,20 @@ class Hospital:
         self.reset(totalIcuBeds)
 
     def reset(self, totalIcuBeds):
-        self.nurses = []
+        self.nurses = deque()
         self.totalIcuBeds = totalIcuBeds
         self.occupiedBeds = set()
 
     def assignNurse(self, person):
         maxedOut = 0
         totalNurses = len(self.nurses)
-        for nurse in self.nurses:
-            if totalNurses == maxedOut:
-                return False
-            elif not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and len(nurse.patients) < maxPatientsPerNurse:
+        
+        while totalNurses != maxedOut:
+            nurse = self.nurses.popleft()
+            self.nurses.append(nurse)
+            if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and len(nurse.patients) < maxPatientsPerNurse:
                 nurse.patients.append(person)
                 person.nurse = nurse
-                self.nurses.remove(nurse)
-                self.nurses.append(nurse)
                 return True
             else:
                 maxedOut += 1
