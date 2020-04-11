@@ -57,7 +57,7 @@ class TestCovid19Sim(unittest.TestCase):
         sim.initPopulation()
 
     def test_00whenAssignNurseAllFullAndPrioritizeNurse_expectNurseGetsCare(self):
-        sim.prioritizeNurseForNurseCare = True
+        sim.prioritizeNursePatient = True
         sim.initPopulation()
         expectedCapacity = round(sim.ratioNursesInPopulation * sim.populationSize) * sim.maxPatientsPerNurse
         patients = []
@@ -71,7 +71,28 @@ class TestCovid19Sim(unittest.TestCase):
         self.assertTrue(sim.hospital.assignNurse(nurse))
         for nurse in sim.hospital.nurses:
            self.assertEqual(sim.maxPatientsPerNurse, len(nurse.patients))
-        sim.prioritizeNurseForNurseCare = False
+        sim.prioritizeNursePatient = False
+        sim.initPopulation()
+
+    def test_00whenAssignIcuBedToNurseWhenBedFull_expectNurseGetsBed(self):
+        sim.prioritizeNursePatient = True
+        sim.initPopulation()
+        expectedCapacity = sim.totalIcuBeds
+        patients = []
+        for i in range(expectedCapacity):
+            patient = sim.Person(sim.Position(0, i))
+            patients.append(patient)
+            self.assertTrue(sim.hospital.assignIcuBed(patient))
+        p = sim.Person(sim.Position(0, expectedCapacity))
+        self.assertFalse(sim.hospital.assignIcuBed(p))
+        nurse = sim.Nurse(sim.Position(0, expectedCapacity))
+        self.assertTrue(sim.hospital.assignIcuBed(nurse))
+        for nonNurse in patients:
+           self.assertTrue(nonNurse.isDead())
+           self.assertEqual(None, nonNurse.nurse)
+           self.assertTrue(nonNurse not in sim.hospital.occupiedBeds)
+        self.assertTrue(nurse in sim.hospital.occupiedBeds)
+        sim.prioritizeNursePatient = False
         sim.initPopulation()
 
     def test_01whenRun_expectProgressSequential(self):

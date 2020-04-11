@@ -20,7 +20,7 @@ icuBedsPerHundredThousand = 13.5
 totalIcuBeds = max(1, round(populationSize * 13.5/100000))
 strikeDays = 0
 ppeArrivalDay = 9999999
-prioritizeNurseForNurseCare = False
+prioritizeNursePatient = False
 
 # Model
 
@@ -143,7 +143,7 @@ class Hospital:
             else:
                 maxedOut += 1
 
-        if not kickOutNonNursePatient and prioritizeNurseForNurseCare and isinstance(person, Nurse):
+        if not kickOutNonNursePatient and prioritizeNursePatient and isinstance(person, Nurse):
             return self.assignNurse(person, True)
         else:
             return False
@@ -155,7 +155,15 @@ class Hospital:
         return None
 
     def assignIcuBed(self, patient):
+        bedAvailable = False
         if len(self.occupiedBeds) < self.totalIcuBeds:
+            bedAvailable = True
+        elif prioritizeNursePatient and isinstance(patient, Nurse):
+            nonNurse = self.findNonNurse(self.occupiedBeds)
+            if nonNurse is not None:
+                nonNurse.die()
+                bedAvailable = True
+        if bedAvailable:
             self.occupiedBeds.add(patient)
             return True
         else:
