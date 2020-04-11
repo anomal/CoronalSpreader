@@ -118,35 +118,33 @@ class Hospital:
         self.totalIcuBeds = totalIcuBeds
         self.occupiedBeds = set()
 
-    def assignNurse(self, person):
+    def assignNurse(self, person, kickOutNonNursePatient=False):
         maxedOut = 0
         totalNurses = len(self.nurses)
         
         while maxedOut != totalNurses:
             nurse = self.nurses.popleft()
             self.nurses.append(nurse)
-            if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and len(nurse.patients) < maxPatientsPerNurse:
-                nurse.patients.append(person)
-                person.nurse = nurse
-                return True
+            if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and (kickOutNonNursePatient or len(nurse.patients) < maxPatientsPerNurse):
+                nurseAvailable = True
+
+                if kickOutNonNursePatient:
+                    nonNurse = self.findNonNurse(nurse.patients)
+                    if nonNurse is None:
+                        nurseAvailable = False
+                    else:
+                        nonNurse.die()
+
+                if nurseAvailable:
+                    nurse.patients.append(person)
+                    person.nurse = nurse
+                    return True
+
             else:
                 maxedOut += 1
 
-        if prioritizeNurseForNurseCare and isinstance(person, Nurse):
-            maxedOut = 0
-            while maxedOut != totalNurses:
-                nurse = self.nurses.popleft()
-                self.nurses.append(nurse)
-                if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()):
-                    nonNurse = self.findNonNurse(nurse.patients)
-                    if nonNurse is not None:
-                        nonNurse.die()
-                        nurse.patients.append(person)
-                        person.nurse = nurse
-                        return True
-                else:
-                    maxedOut += 1
-            return False
+        if not kickOutNonNursePatient and prioritizeNurseForNurseCare and isinstance(person, Nurse):
+            return self.assignNurse(person, True)
         else:
             return False
     
