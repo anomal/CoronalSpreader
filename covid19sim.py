@@ -265,7 +265,7 @@ def spread(strike, hasPpe):
         
 def aggregations(df):
     return df.groupby(["day"]) \
-        .sum()[{"wasInfected", "isDead", "isRecovered", "newlyInfected","newlyInfectedSevere","wasInfectedNurse"}] \
+        .sum()[{"wasInfected", "isDead", "isRecovered", "newlyInfected","newlyInfectedSevere","wasInfectedNurse", "isDeadNurse"}] \
         .reset_index() \
         .rename(columns={
             "day" : "Day",
@@ -274,7 +274,8 @@ def aggregations(df):
             "isRecovered" : "Total Recovered",
             "newlyInfected" : "New Infections",
             "newlyInfectedSevere" : "New Infections Requiring Hospitalization",
-            "wasInfectedNurse" : "Total Nurse Infections"
+            "wasInfectedNurse" : "Total Nurse Infections",
+            "isDeadNurse" : "Total Nurses Dead"
     })
 
 def run():
@@ -301,6 +302,7 @@ def collectData(data, day):
         data["newlyInfected"] = []
         data["newlyInfectedSevere"] = []
         data["wasInfectedNurse"] = []
+        data["isDeadNurse"] = []
     for person in people:
         data["day"].append(day)
         data["id"].append(str(person))
@@ -319,7 +321,7 @@ def collectData(data, day):
         data["newlyInfected"].append(person.infectionDay == 1)
         data["newlyInfectedSevere"].append(person.infectionDay == 1 and person.isSevere())
         data["wasInfectedNurse"].append(isinstance(person,Nurse) and person.outcome is not Outcome.UNINFECTED)
-
+        data["isDeadNurse"].append(isinstance(person,Nurse) and person.isDead())
 width = 64
 height = math.floor(populationSize / width)
 
