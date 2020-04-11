@@ -122,7 +122,7 @@ class Hospital:
         maxedOut = 0
         totalNurses = len(self.nurses)
         
-        while totalNurses != maxedOut:
+        while maxedOut != totalNurses:
             nurse = self.nurses.popleft()
             self.nurses.append(nurse)
             if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and len(nurse.patients) < maxPatientsPerNurse:
@@ -131,7 +131,30 @@ class Hospital:
                 return True
             else:
                 maxedOut += 1
-        return False
+
+        if prioritizeNurseForNurseCare and isinstance(person, Nurse):
+            maxedOut = 0
+            while maxedOut != totalNurses:
+                nurse = self.nurses.popleft()
+                self.nurses.append(nurse)
+                if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()):
+                    nonNurse = self.findNonNurse(nurse.patients)
+                    if nonNurse is not None:
+                        nonNurse.die()
+                        nurse.patients.append(person)
+                        person.nurse = nurse
+                        return True
+                else:
+                    maxedOut += 1
+            return False
+        else:
+            return False
+    
+    def findNonNurse(self, patients):
+        for patient in patients:
+            if not isinstance(patient, Nurse):
+                return patient
+        return None
 
     def assignIcuBed(self, patient):
         if len(self.occupiedBeds) < self.totalIcuBeds:

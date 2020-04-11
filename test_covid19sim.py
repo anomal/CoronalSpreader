@@ -56,6 +56,24 @@ class TestCovid19Sim(unittest.TestCase):
         self.assertTrue(sim.hospital.assignNurse(p))
         sim.initPopulation()
 
+    def test_00whenAssignNurseAllFullAndPrioritizeNurse_expectNurseGetsCare(self):
+        sim.prioritizeNurseForNurseCare = True
+        sim.initPopulation()
+        expectedCapacity = round(sim.ratioNursesInPopulation * sim.populationSize) * sim.maxPatientsPerNurse
+        patients = []
+        for i in range(expectedCapacity):
+            patient = sim.Person(sim.Position(0, i))
+            patients.append(patient)
+            self.assertTrue(sim.hospital.assignNurse(patient))
+        p = sim.Person(sim.Position(0, expectedCapacity))
+        self.assertFalse(sim.hospital.assignNurse(p))
+        nurse = sim.Nurse(sim.Position(0, expectedCapacity))
+        self.assertTrue(sim.hospital.assignNurse(nurse))
+        for nurse in sim.hospital.nurses:
+           self.assertEqual(sim.maxPatientsPerNurse, len(nurse.patients))
+        sim.prioritizeNurseForNurseCare = False
+        sim.initPopulation()
+
     def test_01whenRun_expectProgressSequential(self):
         df = sim.run()
         for row in range(sim.height):
