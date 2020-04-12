@@ -107,7 +107,7 @@ class TestCovid19Sim(unittest.TestCase):
                    isExpected = infectionDay == deathDay or infectionDay + sim.recoveryTime == deathDay
                    if not isExpected:
                        print(infectedPersonDf)
-                       print("infectionDay", infectionDay, "deathDay", deathDay)
+                       print("deathDay - infectionDay = ", deathDay, "-", infectionDay, "=", deathDay - infectionDay)
                        print(deathDf)
                    self.assertTrue(isExpected)
                else:
