@@ -5,6 +5,23 @@ import covid19sim as sim
 
 class TestCovid19Sim(unittest.TestCase):
 
+    def setUp(self):
+        sim.populationSize = 2048
+        sim.ratioNursesInPopulation = 0.015
+        sim.infectiousness = 0.15
+        sim.ppeProtection = 0.95
+        sim.proportionSevere = 0.2
+        sim.proportionSevereCritical = 0.25
+        sim.recoveryTime = 18
+        sim.fatalityRate = 0.01
+        sim.maxPatientsPerNurse = 4
+        sim.totalDays = 240
+        sim.icuBedsPerHundredThousand = 13.5
+        sim.strikeDays = 0
+        sim.ppeArrivalDay = 9999999
+        sim.prioritizeNursePatient = False
+        sim.initPopulation()
+
     def test_00whenGetExposureResult_expectInfection15(self):
         total = 4000
         count = 0
@@ -64,6 +81,7 @@ class TestCovid19Sim(unittest.TestCase):
         for i in range(expectedCapacity):
             patient = sim.Person(sim.Position(0, i))
             patients.append(patient)
+            patient.infect(sim.Severity.NONINV_VENT)
             self.assertTrue(sim.hospital.assignNurse(patient))
         p = sim.Person(sim.Position(0, expectedCapacity))
         self.assertFalse(sim.hospital.assignNurse(p))
@@ -77,15 +95,17 @@ class TestCovid19Sim(unittest.TestCase):
     def test_00whenAssignIcuBedToNurseWhenBedFull_expectNurseGetsBed(self):
         sim.prioritizeNursePatient = True
         sim.initPopulation()
-        expectedCapacity = sim.totalIcuBeds
+        expectedCapacity = sim.getTotalIcuBeds()
         patients = []
         for i in range(expectedCapacity):
             patient = sim.Person(sim.Position(0, i))
             patients.append(patient)
+            patient.infect(sim.Severity.INV_VENT)
             self.assertTrue(sim.hospital.assignIcuBed(patient))
         p = sim.Person(sim.Position(0, expectedCapacity))
         self.assertFalse(sim.hospital.assignIcuBed(p))
         nurse = sim.Nurse(sim.Position(0, expectedCapacity))
+        nurse.infect(sim.Severity.INV_VENT)
         self.assertTrue(sim.hospital.assignIcuBed(nurse))
         for nonNurse in patients:
            self.assertTrue(nonNurse.isDead())
