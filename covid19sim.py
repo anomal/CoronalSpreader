@@ -17,7 +17,6 @@ fatalityRate = 0.01
 maxPatientsPerNurse = 4
 totalDays = 240
 icuBedsPerHundredThousand = 13.5
-totalIcuBeds = max(1, round(populationSize * 13.5/100000))
 strikeDays = 0
 ppeArrivalDay = 9999999
 prioritizeNursePatient = False
@@ -118,36 +117,41 @@ class Hospital:
         self.totalIcuBeds = totalIcuBeds
         self.occupiedBeds = set()
 
-    def assignNurse(self, person, kickOutNonNursePatient=False):
+    def assignNurse(self, person):
         maxedOut = 0
         totalNurses = len(self.nurses)
         
         while maxedOut != totalNurses:
             nurse = self.nurses.popleft()
             self.nurses.append(nurse)
-            if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and (kickOutNonNursePatient or len(nurse.patients) < maxPatientsPerNurse):
-                nurseAvailable = True
-
-                if kickOutNonNursePatient:
-                    nonNurse = self.findNonNurse(nurse.patients)
-                    if nonNurse is None:
-                        nurseAvailable = False
-                    else:
-                        nonNurse.die()
-
-                if nurseAvailable:
-                    nurse.patients.append(person)
-                    person.nurse = nurse
-                    return True
-
+            if not nurse.isDead() and (not nurse.isSevere() or nurse.isRecovered()) and len(nurse.patients) < maxPatientsPerNurse:
+                nurse.patients.append(person)
+                person.nurse = nurse
+                return True
             else:
                 maxedOut += 1
 
-        if not kickOutNonNursePatient and prioritizeNursePatient and isinstance(person, Nurse):
-            return self.assignNurse(person, True)
+        if prioritizeNursePatient and isinstance(person, Nurse):
+            newestNonNursePatient = self.findNewestNonNursePatient()
+            if newestNonNursePatient is None:
+                return False
+            else:
+                nurseToFree = newestNonNursePatient.nurse
+                newestNonNursePatient.die()
+                nurseToFree.patients.append(person)
+                person.nurse = nurseToFree
+                return True
         else:
             return False
     
+    def findNewestNonNursePatient(self):
+        newest = None
+        for nurse in self.nurses:
+            for patient in nurse.patients:
+                if not isinstance(patient, Nurse) and (newest is None or patient.infectionDay < newest.infectionDay):
+                    newest = patient
+        return newest
+
     def findNonNurse(self, patients):
         for patient in patients:
             if not isinstance(patient, Nurse):
@@ -171,10 +175,6 @@ class Hospital:
 
     def releaseIcuBed(self, patient):
         self.occupiedBeds.discard(patient)
-
-hospital = Hospital(totalIcuBeds)
-people = []
-infected = []
 
 # Functions
 
@@ -330,13 +330,20 @@ def collectData(data, day):
         data["newlyInfectedSevere"].append(person.infectionDay == 1 and person.isSevere())
         data["wasInfectedNurse"].append(isinstance(person,Nurse) and person.outcome is not Outcome.UNINFECTED)
         data["isDeadNurse"].append(isinstance(person,Nurse) and person.isDead())
+
+def getTotalIcuBeds():
+    return max(1, round(populationSize * icuBedsPerHundredThousand/100000))
+
 width = 64
 height = math.floor(populationSize / width)
+hospital = Hospital(getTotalIcuBeds())
+people = []
+infected = []
 
 def initPopulation():
     people.clear()
     infected.clear()
-    hospital.reset(totalIcuBeds)
+    hospital.reset(getTotalIcuBeds())
     
     for i in range(0, populationSize):
         position = Position(i % width, math.floor(i / width))
@@ -350,8 +357,6 @@ def initPopulation():
             person.infect(Severity.MILD)
             infected.append(person)
         people.append(person)
-
-sNurse = "Nurse"
 
 def legend(person):
 
