@@ -116,6 +116,7 @@ class Hospital:
         self.nurses = deque()
         self.totalIcuBeds = totalIcuBeds
         self.occupiedBeds = set()
+        self.nurseColleagues = {}
 
     def assignNurse(self, person):
         maxedOut = 0
@@ -194,18 +195,11 @@ def getNeighbours(person):
     return neighbours
 
 def getColleagues(nurse):
-    colleagues = []
-    for n in [-1, 1]:
-        x = nurse.position.x * n
-        y = nurse.position.y * n
-        if (validCoordinate(x,y)):
-            index = y * width + x
-            colleague = people[index]
-            if not isinstance(colleague, Nurse):
-                raise ValueError("Wrong coordinates")
-            else:
-                colleagues.append(colleague)
-    return colleagues
+    colleagues = hospital.nurseColleagues[nurse]
+    if len(colleagues) < 1:
+        raise ValueError("Unexpected number of colleagues")
+    else:
+        return colleagues
 
 def findNurse(patient, strike):
     if strike or not hospital.assignNurse(patient):
@@ -340,17 +334,47 @@ hospital = Hospital(getTotalIcuBeds())
 people = []
 infected = []
 
+def isToBeNurse(i):
+    if ratioNursesInPopulation == 0:
+        return False
+    else:
+        divisor = 3
+        peoplePerNurse = 1/ratioNursesInPopulation
+        for n in range(divisor):
+            if i % divisor == n and i % round(peoplePerNurse) == round(peoplePerNurse * n/divisor):
+                return True 
+        return False
+    #return ratioNursesInPopulation != 0 and ( \
+     #   i % 3 == 0 and i % round(1/ratioNursesInPopulation) == 0 \
+      #  or i % 3 == 1 and i % round(1/ratioNursesInPopulation) == round(1/ratioNursesInPopulation*1/3) \
+       # or i % 3 == 2 and i % round(1/ratioNursesInPopulation) == round(1/ratioNursesInPopulation*2/3) \
+    #)
+
 def initPopulation():
     people.clear()
     infected.clear()
     hospital.reset(getTotalIcuBeds())
-    
+    prevNurse = None
+
     for i in range(0, populationSize):
         position = Position(i % width, math.floor(i / width))
 
-        if ratioNursesInPopulation != 0 and i % round(1/ratioNursesInPopulation) == 0:
+        if isToBeNurse(i):
             person = Nurse(position)
-            hospital.nurses.append(person)
+            hospital.nurseColleagues[person] = []
+
+            if prevNurse is not None:
+                # add previous nurse as colleague of current nurse
+                hospital.nurseColleagues[person].append(prevNurse)
+                # add current nurse as colleague of previous nurse
+                hospital.nurseColleagues[prevNurse].append(person)
+
+            prevNurse = person
+
+            if i % 2 == 0:
+                hospital.nurses.append(person)
+            else:
+                hospital.nurses.appendleft(person)
         else:
             person = Person(position)
         if i == math.floor(populationSize / 2) + math.floor(width / 2) :
