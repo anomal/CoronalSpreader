@@ -211,11 +211,9 @@ def getExposureResult(hasPpe):
     else:
         protection = 0
 
-    chance = random()
-    if chance < infectiousness * (1 - protection):
-        chanceSevereFromExposure = infectiousness * proportionSevere
-        if chance < chanceSevereFromExposure:
-            if chance < chanceSevereFromExposure * proportionSevereCritical:
+    if random() < infectiousness * (1 - protection):
+        if random() < proportionSevere:
+            if random() < proportionSevereCritical:
                 return Severity.INV_VENT
             else:
                 return Severity.NONINV_VENT

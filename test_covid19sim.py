@@ -23,12 +23,11 @@ class TestCovid19Sim(unittest.TestCase):
         sim.initPopulation()
 
     def test_00whenGetExposureResult_expectInfection15(self):
-        total = 4000
+        total = 200000
         count = 0
         severeCount = 0
         criticalCount = 0
-        ep = 0.15
-        epCrit = 0.2
+        ep = 0.05
         for i in range(total):
             severity = sim.getExposureResult(False)
             if severity is not None:
@@ -41,20 +40,21 @@ class TestCovid19Sim(unittest.TestCase):
         avg = count / total
         isInExpectedRange = avg * (1-ep) < sim.infectiousness and avg * (1+ep) > sim.infectiousness
         if not isInExpectedRange:
-            expectedCount = sim.infectiousness * 300
+            expectedCount = sim.infectiousness * total
             print("expected avg:", sim.infectiousness, "real avg:", avg, "expected count:", expectedCount, "real count", count)
         self.assertTrue(isInExpectedRange)
-        severePerInfected = severeCount / count
-        severityIsExpected = severePerInfected * (1-ep) < sim.proportionSevere and severePerInfected * (1+ep) > sim.proportionSevere
+        severePerTotal = severeCount / total
+        severityIsExpected = severePerTotal * (1-ep) < sim.proportionSevere * sim.infectiousness and severePerTotal * (1+ep) > sim.proportionSevere * sim.infectiousness
         if not severityIsExpected:
-            print("expected severity proportion:", sim.proportionSevere, "actual severity proportion:", severePerInfected, \
-                "expected severe cases:", count * sim.proportionSevere, "actual severe cases", severeCount)
+            print("expected severity proportion:", sim.proportionSevere * sim.infectiousness, "actual severity proportion:", severePerTotal, \
+                "expected severe cases:", total * sim.infectiousness * sim.proportionSevere, "actual severe cases", severeCount)
         self.assertTrue(severityIsExpected)
-        criticalPerSevere = criticalCount / severeCount
-        criticalIsExpected = criticalPerSevere * (1-epCrit) < sim.proportionSevereCritical and criticalPerSevere * (1+epCrit) > sim.proportionSevereCritical
+        criticalPerTotal = criticalCount / total
+        criticalIsExpected = criticalPerTotal * (1-ep) < sim.proportionSevereCritical * sim.proportionSevere * sim.infectiousness \
+            and criticalPerTotal * (1+ep) > sim.proportionSevereCritical * sim.proportionSevere * sim.infectiousness
         if not criticalIsExpected:
-            print("expected critical:", sim.proportionSevereCritical, ", actual critical:", criticalPerSevere, \
-                ", expected crit count:", sim.proportionSevereCritical * severeCount, ", actual crit count:", criticalCount)
+            print("expected critical:", sim.proportionSevereCritical * sim.proportionSevere * sim.infectiousness, ", actual critical:", criticalPerTotal, \
+                ", expected crit count:", total * sim.proportionSevereCritical * sim.proportionSevere * sim.infectiousness, ", actual crit count:", criticalCount)
         self.assertTrue(criticalIsExpected)
 
     def test_00whenAssignNurseAllFullOnly_expectFalse(self):
